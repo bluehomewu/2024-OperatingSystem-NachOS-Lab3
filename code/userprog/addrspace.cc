@@ -76,6 +76,8 @@ AddrSpace::AddrSpace() {
         // 2. Initialize "valid" as FALSE, means this page isn't mapped to usable physical memory ( Main memory ).
 
         /* Remove this comment and implement your code here */
+        pageTable[i].physicalPage = 0;
+        pageTable[i].valid = FALSE;
 
         /* Lab3 - NachOS - Memory Management - End */
     } // for()
@@ -94,6 +96,12 @@ AddrSpace::~AddrSpace()
     // Required Features : 
     // 1. Release the space in the Main memory that has been used up ( In other words, mark the corresponding position in the Frame Table as available )
     // 2. Delete Page Table
+    for (int i = 0; i < numPages; i++) {
+        if (pageTable[i].valid) {
+            kernel->frameTable[pageTable[i].physicalPage] = FALSE;
+        }
+    }
+    delete pageTable;
 
     /* Remove this comment and implement your code here */
 
@@ -157,6 +165,10 @@ AddrSpace::Load(char *fileName)
     //    If this occurs, throw a MemoryLimitException.
     //    Example: if (condition) ExceptionHandler(MemoryLimitException)
 
+    if (numPages > NumPhysPages) {
+        ExceptionHandler(MemoryLimitException);
+    }
+
     /* Remove this comment and implement your code here */
 
     /* Lab3 - NachOS - Memory Management - End */
@@ -186,10 +198,29 @@ AddrSpace::Load(char *fileName)
     for ( int i = 0, j = 0 ; i < numPages ; i++ ) {
         
         /* Remove this comment and implement requirment 1 and 2 here */
+        // 1. Check which frames in main memory (frame table) are empty
+
+        for ( ; j < NumPhysPages ; j++ ) {
+            if ( !kernel->frameTable[j] ) {
+                kernel->frameTable[j] = TRUE;
+                break;
+            }
+        }
+
+        // 2. Check if the virtual page exceeds the physical page limit
+        //    If this occurs, throw a MemoryLimitException and return FALSE
+        if ( j == NumPhysPages ) {
+            ExceptionHandler(MemoryLimitException);
+            return FALSE;
+        }
 
         bzero(&(kernel->machine->mainMemory[j * PageSize]), PageSize) ; // Review and understand the functionality of this function
                                                                         // Similar to the previous loop, this can be removed if you implement your own method.
         /* Remove this comment and implement requirment 3 here */
+        // 3. Update page table information
+
+        pageTable[i].physicalPage = j;
+        pageTable[i].valid = TRUE;
 
         // Grading Optional
         pageTable[i].use = false;
